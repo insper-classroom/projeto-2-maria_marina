@@ -1,13 +1,12 @@
-from flask import Flask, render_template_string, request, redirect
-import views
+from flask import Flask, request, redirect
 app = Flask(__name__)
 app.static_folder = 'static'
 
 @app.route('/')
 def index():
-    return render_template_string(views.index())
+    pass
 
-
-if __name__ == '_main_':
+if __name__ == '__main__':
     app.run(debug=True)
 
+# oi marina =)
