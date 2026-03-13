@@ -4,7 +4,7 @@ from servidor import app, connect_db
 
 @pytest.fixture
 def imoveis():
-    """Cria um cliente de teste para a API."""
+    """Cria imoveis de teste para a API."""
     app.config["TESTING"] = True
     with app.test_imoveis() as imoveis:
         yield imoveis
@@ -48,3 +48,4 @@ def test_get_imoveis(mock_connect_db, imoveis):
 
     # Verificamos se a consulta SQL foi executada corretamente
     mock_cursor.execute.assert_called_once_with("SELECT * from tbl_alunos")
+    mock_cursor.execute.assert_called_once_with("SELECT * from")
