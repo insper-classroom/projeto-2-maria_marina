@@ -1,17 +1,17 @@
-import sqlite3
+# import sqlite3
 
-def get_imoveis():
-    conn = sqlite3.connect('imoveis.sql')
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+# def get_imoveis():
+#     conn = sqlite3.connect('imoveis.sql')
+#     conn.row_factory = sqlite3.Row
+#     cursor = conn.cursor()
 
-    resposta = cursor.execute("""
-        SELECT * FROM imoveis
-    """)
-    print(resposta)
+#     resposta = cursor.execute("""
+#         SELECT * FROM imoveis
+#     """)
+#     print(resposta)
 
-    rows = cursor.fetchall()
-    conn.close()
-    return rows
+#     rows = cursor.fetchall()
+#     conn.close()
+#     return rows
 
-get_imoveis()
+# get_imoveis()
