@@ -138,6 +138,28 @@ def registrar_rotas(app):
 
         return {"mensagem": "Imóvel atualizado com sucesso"}, 200
     
+    @app.route("/imoveis/<int:id>", methods=["DELETE"])
+    def delete_imovel(id):
+        from servidor import connect_db
+
+        conn = connect_db()
+
+        if conn is None:
+            return {"erro": "Erro ao conectar ao banco de dados"}, 500
+
+        cursor = conn.cursor()
+
+        sql = "DELETE from imoveis WHERE id=%s"
+        valores = (id,)
+
+        cursor.execute(sql, valores)
+        conn.commit()
+
+        if cursor.rowcount == 0:
+            return {"erro": "Imóvel não encontrado"}, 404
+
+        return {"mensagem": "Imóvel excluido com sucesso"}, 200
+    
     @app.route("/imoveis/tipo/<string:tipo>", methods=["GET"])
     def listar_imoveis_por_tipo(tipo):
         from servidor import connect_db
