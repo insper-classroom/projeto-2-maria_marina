@@ -128,37 +128,38 @@ dados_imovel_teste = {
 
 @patch("servidor.connect_db")
 def test_add_novo_imovel(mock_connect_db, client):
-    """"Testa adicionar um imóvel novo"""
-
-    #given
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
-    mock_connect_db.return_value = mock_conn
-
-    mock_cursor.fetchall.return_value = [
-        (1, "Nicole Common", "Travessa", "Lake Danielle", "Judymouth", "85184", "casa em condominio", 488423.52, "2017-07-29"),
-        (2, "Price Prairie", "Travessa", "Colonton", "North Garyville", "93354", "casa em condominio", 260069.89, "2021-11-30"),
-        (3, "Taylor Ranch", "Avenida", "West Jennashire", "Katherinefurt", "51116", "apartamento", 815969.92, "2020-04-24"),
-    ]
 
     mock_connect_db.return_value = mock_conn
+    mock_conn.cursor.return_value = mock_cursor
 
-    # When
-    response = client.get("/imoveis/add")
+    #when
+    response = client.post("/imoveis", json=dados_imovel_teste)
+
     # Then
     assert response.status_code == 200
+    assert response.get_json() == {"mensagem": "Imóvel adicionado com sucesso"}
 
-    expected_response = {
-        "imoveis": [
-            {"id": 1, "logradouro": "Nicole Common", "tipo_logradouro": "Travessa", "bairro": "Lake Danielle", "cidade": "Judymouth", "cep": "85184", "tipo": "casa em condominio", "valor": 488423.52, "data_aquisicao": "2017-07-29"},
-            {"id": 2, "logradouro": "Price Prairie", "tipo_logradouro": "Travessa", "bairro": "Colonton", "cidade": "North Garyville", "cep": "93354", "tipo": "casa em condominio", "valor": 260069.89, "data_aquisicao": "2021-11-30"},
-            {"id": 3, "logradouro": "Taylor Ranch", "tipo_logradouro": "Avenida", "bairro": "West Jennashire", "cidade": "Katherinefurt", "cep": "51116", "tipo": "apartamento", "valor": 815969.92, "data_aquisicao": "2020-04-24"},
-            {"id": 4,  "logradouro": "Stacey Isle", "tipo_logradouro": "Avenida", "bairro": "Reneeberg", "cidade": "Bentleymouth", "cep": "01631", "tipo": "terreno", "valor": 352507.35, "data_aquisicao": "2014-11-03"}
-        ]
-    }
+    mock_cursor.execute.assert_called_once_with(
+         """
+        INSERT INTO imoveis (
+            logradouro, tipo_logradouro, bairro, cidade,
+            cep, tipo, valor, data_aquisicao
+        ) VALUES ( %s, %s , %s, %s, %s, %s, %s, %s)
+        """,
+        (dados_imovel_teste["logradouro"],
+            dados_imovel_teste["tipo_logradouro"],
+            dados_imovel_teste["bairro"],
+            dados_imovel_teste["cidade"],
+            dados_imovel_teste["cep"],
+            dados_imovel_teste["tipo"],
+            dados_imovel_teste["valor"],
+            dados_imovel_teste["data_aquisicao"])
+        )
+    
+    mock_conn.commit.assert_called_once()
 
-    assert response.get_json() == expected_response
-    mock_cursor.execute.assert_called_once_with("INSERT INTO imoveis (id, logradouro, tipo_logradouro, bairro, cidade, cep, tipo, valor, data_aquisicao) VALUES (4, 'Stacey Isle', 'Avenida', 'Reneeberg', 'Bentleymouth, '01631', 'terreno', 352507.35, '2014-11-03')")
 
 @patch("servidor.connect_db")
 def test_atualizar_imovel_existente(mock_connect_db, client):
