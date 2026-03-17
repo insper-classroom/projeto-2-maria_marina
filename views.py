@@ -194,3 +194,34 @@ def registrar_rotas(app):
             })
 
         return {"imoveis": imoveis}, 200
+    
+    @app.route("/imoveis/cidade/<string:cidade>", methods=['GET'])
+    def listar_imoveis_por_cidade(cidade):
+        from servidor import connect_db
+
+        conn = connect_db()
+
+        if conn is None:
+            return {"erro": "Erro ao conectar ao banco de dados"}, 500
+
+        cursor = conn.cursor()
+
+        cursor.execute("SELECT * FROM imoveis WHERE cidade = %s", (cidade,))
+        resultados = cursor.fetchall()
+
+        imoveis = []
+
+        for imovel in resultados:
+            imoveis.append({
+                "id": imovel[0],
+                "logradouro": imovel[1],
+                "tipo_logradouro": imovel[2],
+                "bairro": imovel[3],
+                "cidade": imovel[4],
+                "cep": imovel[5],
+                "tipo": imovel[6],
+                "valor": imovel[7],
+                "data_aquisicao": imovel[8]
+            })
+
+        return {"imoveis": imoveis}, 200
