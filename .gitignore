@@ -215,5 +215,6 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+#Ligação com o banco de dados
 .cred
 ca.pem
