@@ -1,3 +1,5 @@
+from flask import request
+
 def registrar_rotas(app):
 
     @app.route("/imoveis", methods=["GET"])
@@ -60,7 +62,40 @@ def registrar_rotas(app):
 
         return {"imovel": imovel}, 200
 
-    from flask import request
+    
+    @app.route("/imoveis", methods=["POST"])
+    def add_novo_imovel():
+        from servidor import connect_db
+
+        conn = connect_db()
+        if conn is None:
+            return {"erro": "Erro ao conectar ao banco"}, 500
+
+        dados = request.json
+        cursor = conn.cursor()
+
+        sql = """
+        INSERT INTO imoveis (
+            logradouro, tipo_logradouro, bairro, cidade,
+            cep, tipo, valor, data_aquisicao
+        ) VALUES ( %s, %s , %s, %s, %s, %s, %s, %s)
+        """
+
+        valores = (
+            dados["logradouro"],
+            dados["tipo_logradouro"],
+            dados["bairro"],
+            dados["cidade"],
+            dados["cep"],
+            dados["tipo"],
+            dados["valor"],
+            dados["data_aquisicao"]
+        )
+
+        cursor.execute(sql, valores)
+        conn.commit()
+
+        return {"mensagem": "Imóvel adicionado com sucesso"}, 200
     
     @app.route("/imoveis/<int:id>", methods=["PUT"])
     def atualizar_imovel(id):
