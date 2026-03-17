@@ -226,33 +226,26 @@ def test_atualizar_imovel_inexistente(mock_connect_db, client):
 
 
 @patch("servidor.connect_db")
-def test_elete_imovel (mock_connect_db, client):
-    """Testa a exclução de um imóvel existente"""
+def test_delete_imovel(mock_connect_db, client):
 
-    # Given
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
+
     mock_conn.cursor.return_value = mock_cursor
     mock_cursor.rowcount = 1
     mock_connect_db.return_value = mock_conn
 
-    response = client.put("/imoveis/1", json=dados_imovel_teste)
+    response = client.delete("/imoveis/1")
 
-     # Then
     assert response.status_code == 200
-    assert response.get_json() == {"mensagem": "Imóvel atualizado com sucesso"}
+    assert response.get_json() == {"mensagem": "Imóvel excluido com sucesso"}
 
     mock_cursor.execute.assert_called_once_with(
-        """
-        DELET from imoveis WHERE id=%s
-        """,
-        (
-            1
-        )
+        "DELETE from imoveis WHERE id=%s",
+        (1,)
     )
 
     mock_conn.commit.assert_called_once()
-
 
 
 @patch("servidor.connect_db")
