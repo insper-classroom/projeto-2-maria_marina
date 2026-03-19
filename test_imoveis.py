@@ -571,8 +571,12 @@ def test_listar_imoveis_por_cidade_inexistente(mock_connect_db, client):
 
     # Then
     assert response.status_code == 200
-    assert response.get_json() == {"imoveis": []}
+    data = response.get_json()
 
+    assert response.status_code == 200
+    assert "imoveis" in data
+    assert data["imoveis"] == []
+    assert "_links" in data
     mock_cursor.execute.assert_called_once_with(
         "SELECT * FROM imoveis WHERE cidade = %s", ("São Paulo",)
     )

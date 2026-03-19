@@ -297,3 +297,22 @@ def listar_imoveis_por_cidade(cidade):
             "collection": url_for("listar_imoveis")
         }
     }, 200
+
+from unittest.mock import patch, MagicMock
+
+@patch("servidor.connect_db")
+def test_listar_imoveis_por_cidade_inexistente(mock_connect_db, client):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cursor.fetchall.return_value = []
+    mock_connect_db.return_value = mock_conn
+
+    response = client.get("/imoveis/cidade/São Paulo")
+
+    assert response.status_code == 200
+
+    data = response.get_json()
+    assert "imoveis" in data
+    assert data["imoveis"] == []
