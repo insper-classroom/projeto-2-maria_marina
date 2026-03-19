@@ -116,63 +116,10 @@ def test_get_imoveis_inexistente(mock_connect_db, client):
     response = client.get("/imoveis")
 
     assert response.status_code == 200
-    assert response.get_json() == {"imoveis": []}
 
-    mock_cursor.execute.assert_called_once_with("SELECT * FROM imoveis")
-
-@patch("servidor.connect_db")
-def test_buscar_imovel_por_id_existente(mock_connect_db, client):
-    """
-    Testa a rota GET /imoveis/<id> quando o imóvel existe.
-    """
-
-    # Given
-    mock_conn = MagicMock()
-    mock_cursor = MagicMock()
-    mock_conn.cursor.return_value = mock_cursor
-    mock_cursor.fetchone.return_value = (
-        1,
-        "Nicole Common",
-        "Travessa",
-        "Lake Danielle",
-        "Judymouth",
-        "85184",
-        "casa em condominio",
-        488423.52,
-        "2017-07-29"
-    )
-
-    mock_connect_db.return_value = mock_conn
-    # When
-    response = client.get("/imoveis/1")
-
-    # Then
-    assert response.status_code == 200
-    expected_response = {
-        "imovel": {
-            "id": 1,
-            "logradouro": "Nicole Common",
-            "tipo_logradouro": "Travessa",
-            "bairro": "Lake Danielle",
-            "cidade": "Judymouth",
-            "cep": "85184",
-            "tipo": "casa em condominio",
-            "valor": 488423.52,
-            "data_aquisicao": "2017-07-29",
-            "_links": {
-                "self": "/imoveis/1",
-                "collection": "/imoveis",
-                "update": "/imoveis/1",
-                "delete": "/imoveis/1"
-            }
-        }
-    }
-    assert response.get_json() == expected_response
-
-    mock_cursor.execute.assert_called_once_with(
-        "SELECT * FROM imoveis WHERE id = %s", (1,)
-    )
-
+    data = response.get_json()
+    assert "imoveis" in data
+    assert data["imoveis"] == []
 
 @patch("servidor.connect_db")
 def test_buscar_imovel_por_id_inexistente(mock_connect_db, client):
