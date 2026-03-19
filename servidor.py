@@ -12,7 +12,7 @@ config = {
     'password': os.getenv('DB_PASSWORD'),
     'database': os.getenv('DB_NAME', 'defaultdb'),
     'port': int(os.getenv('DB_PORT', 3306)),
-    'ssl_ca': os.getenv('SSL_CA_PATH')
+    'ssl_ca': '/home/ubuntu/projeto-2-maria_marina/ca.pem'
 }
 
 
