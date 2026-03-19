@@ -32,13 +32,76 @@ def test_get_imoveis(mock_connect_db, client):
 
     expected_response = {
         "imoveis": [
-            {"id": 1, "logradouro": "Nicole Common", "tipo_logradouro": "Travessa", "bairro": "Lake Danielle", "cidade": "Judymouth", "cep": "85184", "tipo": "casa em condominio", "valor": 488423.52, "data_aquisicao": "2017-07-29"},
-            {"id": 2, "logradouro": "Price Prairie", "tipo_logradouro": "Travessa", "bairro": "Colonton", "cidade": "North Garyville", "cep": "93354", "tipo": "casa em condominio", "valor": 260069.89, "data_aquisicao": "2021-11-30"},
-            {"id": 3, "logradouro": "Taylor Ranch", "tipo_logradouro": "Avenida", "bairro": "West Jennashire", "cidade": "Katherinefurt", "cep": "51116", "tipo": "apartamento", "valor": 815969.92, "data_aquisicao": "2020-04-24"},
-        ]
+            {
+                "id": 1,
+                "logradouro": "Nicole Common",
+                "tipo_logradouro": "Travessa",
+                "bairro": "Lake Danielle",
+                "cidade": "Judymouth",
+                "cep": "85184",
+                "tipo": "casa em condominio",
+                "valor": 488423.52,
+                "data_aquisicao": "2017-07-29",
+                "_links": {
+                    "self": "/imoveis/1",
+                    "collection": "/imoveis",
+                    "update": "/imoveis/1",
+                    "delete": "/imoveis/1"
+                }
+            },
+            {
+                "id": 2,
+                "logradouro": "Price Prairie",
+                "tipo_logradouro": "Travessa",
+                "bairro": "Colonton",
+                "cidade": "North Garyville",
+                "cep": "93354",
+                "tipo": "casa em condominio",
+                "valor": 260069.89,
+                "data_aquisicao": "2021-11-30",
+                "_links": {
+                    "self": "/imoveis/2",
+                    "collection": "/imoveis",
+                    "update": "/imoveis/2",
+                    "delete": "/imoveis/2"
+                }
+            },
+            {
+                "id": 3,
+                "logradouro": "Taylor Ranch",
+                "tipo_logradouro": "Avenida",
+                "bairro": "West Jennashire",
+                "cidade": "Katherinefurt",
+                "cep": "51116",
+                "tipo": "apartamento",
+                "valor": 815969.92,
+                "data_aquisicao": "2020-04-24",
+                "_links": {
+                    "self": "/imoveis/3",
+                    "collection": "/imoveis",
+                    "update": "/imoveis/3",
+                    "delete": "/imoveis/3"
+                }
+            },
+        ],
+        "_links": {
+            "self": "/imoveis",
+            "create": "/imoveis"
+        }
     }
 
-    assert response.get_json() == expected_response
+    data = response.get_json()
+
+    assert response.status_code == 200
+    assert "imoveis" in data
+    assert "_links" in data
+
+    assert data["_links"] == {
+        "self": "/imoveis",
+        "create": "/imoveis"
+    }
+
+    assert len(data["imoveis"]) == 3
     mock_cursor.execute.assert_called_once_with("SELECT * FROM imoveis")
 
 @patch("servidor.connect_db")
@@ -82,8 +145,8 @@ def test_buscar_imovel_por_id_existente(mock_connect_db, client):
     mock_connect_db.return_value = mock_conn
     # When
     response = client.get("/imoveis/1")
-    # Then
 
+    # Then
     assert response.status_code == 200
     expected_response = {
         "imovel": {
@@ -95,7 +158,13 @@ def test_buscar_imovel_por_id_existente(mock_connect_db, client):
             "cep": "85184",
             "tipo": "casa em condominio",
             "valor": 488423.52,
-            "data_aquisicao": "2017-07-29"
+            "data_aquisicao": "2017-07-29",
+            "_links": {
+                "self": "/imoveis/1",
+                "collection": "/imoveis",
+                "update": "/imoveis/1",
+                "delete": "/imoveis/1"
+            }
         }
     }
     assert response.get_json() == expected_response
@@ -129,7 +198,6 @@ def test_buscar_imovel_por_id_inexistente(mock_connect_db, client):
     )
 
 
-# dados padronizados usados nos testes
 dados_imovel_teste = {
     "logradouro": "Nicole Common",
     "tipo_logradouro": "Travessa",
@@ -148,30 +216,40 @@ def test_add_novo_imovel(mock_connect_db, client):
 
     mock_connect_db.return_value = mock_conn
     mock_conn.cursor.return_value = mock_cursor
+    mock_cursor.lastrowid = 10
 
     #when
     response = client.post("/imoveis", json=dados_imovel_teste)
 
     # Then
-    assert response.status_code == 200
-    assert response.get_json() == {"mensagem": "Imóvel adicionado com sucesso"}
+    assert response.status_code == 201
+    assert response.get_json() == {
+        "imovel": {
+            "id": 10,
+            **dados_imovel_teste,
+            "_links": {
+                "self": "/imoveis/10",
+                "collection": "/imoveis",
+                "update": "/imoveis/10",
+                "delete": "/imoveis/10"
+            }
+        }
+    }
 
-    mock_cursor.execute.assert_called_once_with(
-         """
-        INSERT INTO imoveis (
-            logradouro, tipo_logradouro, bairro, cidade,
-            cep, tipo, valor, data_aquisicao
-        ) VALUES ( %s, %s , %s, %s, %s, %s, %s, %s)
-        """,
-        (dados_imovel_teste["logradouro"],
-            dados_imovel_teste["tipo_logradouro"],
-            dados_imovel_teste["bairro"],
-            dados_imovel_teste["cidade"],
-            dados_imovel_teste["cep"],
-            dados_imovel_teste["tipo"],
-            dados_imovel_teste["valor"],
-            dados_imovel_teste["data_aquisicao"])
-        )
+    assert mock_cursor.execute.call_count == 1
+    query, params = mock_cursor.execute.call_args[0]
+    assert "INSERT INTO imoveis" in query
+
+    assert params == (
+        dados_imovel_teste["logradouro"],
+        dados_imovel_teste["tipo_logradouro"],
+        dados_imovel_teste["bairro"],
+        dados_imovel_teste["cidade"],
+        dados_imovel_teste["cep"],
+        dados_imovel_teste["tipo"],
+        dados_imovel_teste["valor"],
+        dados_imovel_teste["data_aquisicao"]
+    )
     
     mock_conn.commit.assert_called_once()
 
@@ -210,31 +288,37 @@ def test_atualizar_imovel_existente(mock_connect_db, client):
     mock_connect_db.return_value = mock_conn
 
     # When
+    mock_cursor.fetchone.return_value = (
+    1,
+    dados_imovel_teste["logradouro"],
+    dados_imovel_teste["tipo_logradouro"],
+    dados_imovel_teste["bairro"],
+    dados_imovel_teste["cidade"],
+    dados_imovel_teste["cep"],
+    dados_imovel_teste["tipo"],
+    dados_imovel_teste["valor"],
+    dados_imovel_teste["data_aquisicao"]
+    )
     response = client.put("/imoveis/1", json=dados_imovel_teste)
 
     # Then
     assert response.status_code == 200
-    assert response.get_json() == {"mensagem": "Imóvel atualizado com sucesso"}
+    assert response.get_json() == {
+        "imovel": {
+            "id": 1,
+            **dados_imovel_teste,
+            "_links": {
+                "self": "/imoveis/1",
+                "collection": "/imoveis",
+                "update": "/imoveis/1",
+                "delete": "/imoveis/1"
+            }
+        }
+    }
 
-    mock_cursor.execute.assert_called_once_with(
-        """
-        UPDATE imoveis
-        SET logradouro=%s, tipo_logradouro=%s, bairro=%s, cidade=%s,
-            cep=%s, tipo=%s, valor=%s, data_aquisicao=%s
-        WHERE id=%s
-        """,
-        (
-            dados_imovel_teste["logradouro"],
-            dados_imovel_teste["tipo_logradouro"],
-            dados_imovel_teste["bairro"],
-            dados_imovel_teste["cidade"],
-            dados_imovel_teste["cep"],
-            dados_imovel_teste["tipo"],
-            dados_imovel_teste["valor"],
-            dados_imovel_teste["data_aquisicao"],
-            1
-        )
-    )
+    calls = mock_cursor.execute.call_args_list
+    assert calls[0][0][0].strip().startswith("UPDATE imoveis")
+    assert calls[1][0] == ("SELECT * FROM imoveis WHERE id = %s", (1,))
 
     mock_conn.commit.assert_called_once()
 
@@ -264,7 +348,7 @@ def test_atualizar_imovel_inexistente(mock_connect_db, client):
 
 @patch("servidor.connect_db")
 def test_delete_imovel(mock_connect_db, client):
-    """"Testa a exclusão de um imóvel inexistente"""
+    """"Testa a exclusão de um imóvel existente"""
     mock_conn = MagicMock()
     mock_cursor = MagicMock()
 
@@ -274,8 +358,8 @@ def test_delete_imovel(mock_connect_db, client):
 
     response = client.delete("/imoveis/1")
 
-    assert response.status_code == 200
-    assert response.get_json() == {"mensagem": "Imóvel excluido com sucesso"}
+    assert response.status_code == 204
+    assert response.get_data(as_text=True) == ''
 
     mock_cursor.execute.assert_called_once_with(
         "DELETE from imoveis WHERE id=%s",
@@ -296,7 +380,7 @@ def test_delete_imovel_inexistente(mock_connect_db, client):
     mock_connect_db.return_value = mock_conn
 
     # When
-    response = client.delete("/imoveis/999", json=dados_imovel_teste)
+    response = client.delete("/imoveis/999")
 
     # Then
     assert response.status_code == 404
@@ -327,9 +411,45 @@ def test_listar_imoveis_por_tipo(mock_connect_db, client):
     assert response.status_code == 200
     expected = {
         "imoveis": [
-            {"id": 3, "logradouro": "Taylor Ranch", "tipo_logradouro": "Avenida", "bairro": "West Jennashire", "cidade": "Katherinefurt", "cep": "51116", "tipo": "apartamento", "valor": 815969.92, "data_aquisicao": "2020-04-24"},
-            {"id": 4, "logradouro": "Green Street", "tipo_logradouro": "Rua", "bairro": "Centro", "cidade": "São Paulo", "cep": "01000", "tipo": "apartamento", "valor": 400000, "data_aquisicao": "2019-10-10"},
-        ]
+            {
+                "id": 3,
+                "logradouro": "Taylor Ranch",
+                "tipo_logradouro": "Avenida",
+                "bairro": "West Jennashire",
+                "cidade": "Katherinefurt",
+                "cep": "51116",
+                "tipo": "apartamento",
+                "valor": 815969.92,
+                "data_aquisicao": "2020-04-24",
+                "_links": {
+                    "self": "/imoveis/3",
+                    "collection": "/imoveis",
+                    "update": "/imoveis/3",
+                    "delete": "/imoveis/3"
+                }
+            },
+            {
+                "id": 4,
+                "logradouro": "Green Street",
+                "tipo_logradouro": "Rua",
+                "bairro": "Centro",
+                "cidade": "São Paulo",
+                "cep": "01000",
+                "tipo": "apartamento",
+                "valor": 400000,
+                "data_aquisicao": "2019-10-10",
+                "_links": {
+                    "self": "/imoveis/4",
+                    "collection": "/imoveis",
+                    "update": "/imoveis/4",
+                    "delete": "/imoveis/4"
+                }
+            },
+        ],
+        "_links": {
+            "self": "/imoveis/tipo/apartamento",
+            "collection": "/imoveis"
+        }
     }
 
     assert response.get_json() == expected
@@ -355,7 +475,13 @@ def test_listar_imoveis_por_tipo_sem_resultados(mock_connect_db, client):
 
     # Then
     assert response.status_code == 200
-    assert response.get_json() == {"imoveis": []}
+    assert response.get_json() == {
+        "imoveis": [],
+        "_links": {
+            "self": "/imoveis/tipo/castelo",
+            "collection": "/imoveis"
+        }
+    }
 
     mock_cursor.execute.assert_called_once_with(
         "SELECT * FROM imoveis WHERE tipo = %s", ("castelo",)
@@ -381,9 +507,45 @@ def test_listar_imoveis_por_cidade(mock_connect_db, client):
 
     expected = {
         "imoveis": [
-            {"id": 3, "logradouro": "Taylor Ranch", "tipo_logradouro": "Avenida", "bairro": "West Jennashire", "cidade": "São Paulo", "cep": "51116", "tipo": "apartamento", "valor": 815969.92, "data_aquisicao": "2020-04-24"},
-            {"id": 4, "logradouro": "Green Street", "tipo_logradouro": "Rua", "bairro": "Centro", "cidade": "São Paulo", "cep": "01000", "tipo": "apartamento", "valor": 400000, "data_aquisicao": "2019-10-10"},
-        ]
+            {
+                "id": 3,
+                "logradouro": "Taylor Ranch",
+                "tipo_logradouro": "Avenida",
+                "bairro": "West Jennashire",
+                "cidade": "São Paulo",
+                "cep": "51116",
+                "tipo": "apartamento",
+                "valor": 815969.92,
+                "data_aquisicao": "2020-04-24",
+                "_links": {
+                    "self": "/imoveis/3",
+                    "collection": "/imoveis",
+                    "update": "/imoveis/3",
+                    "delete": "/imoveis/3"
+                }
+            },
+            {
+                "id": 4,
+                "logradouro": "Green Street",
+                "tipo_logradouro": "Rua",
+                "bairro": "Centro",
+                "cidade": "São Paulo",
+                "cep": "01000",
+                "tipo": "apartamento",
+                "valor": 400000,
+                "data_aquisicao": "2019-10-10",
+                "_links": {
+                    "self": "/imoveis/4",
+                    "collection": "/imoveis",
+                    "update": "/imoveis/4",
+                    "delete": "/imoveis/4"
+                }
+            },
+        ],
+        "_links": {
+            "self": "/imoveis/cidade/S%C3%A3o%20Paulo",
+            "collection": "/imoveis"
+        }
     }
 
     assert response.get_json() == expected

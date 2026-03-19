@@ -1,0 +1,67 @@
+# API Imobiliária RESTful
+
+API RESTful desenvolvida com Flask para gerenciamento de imóveis, utilizando MySQL (Aiven), seguindo princípios de TDD e nível 3 de maturidade de Richardson (HATEOAS).
+
+## Tecnologias
+
+- Python + Flask  
+- MySQL (Aiven)  
+- Pytest  
+
+## Funcionalidades
+
+- Listar todos os imóveis  
+- Buscar imóvel por ID  
+- Criar novo imóvel  
+- Atualizar imóvel  
+- Deletar imóvel  
+- Buscar por tipo  
+- Buscar por cidade  
+
+## TDD (Test-Driven Development)
+
+O projeto foi desenvolvido seguindo o ciclo clássico de TDD:
+
+1. Teste (Red)  
+Primeiro, foi escrito um teste definindo o comportamento esperado da rota, utilizando pytest e mock do banco de dados.
+
+2. Implementação (Green)  
+Em seguida, foi implementada a rota com o mínimo necessário para que o teste passasse.
+
+3. Refatoração (Refactor)  
+Após os testes passarem, o código foi refatorado para melhorar organização, reutilização e legibilidade, sem quebrar os testes.
+
+Esse processo foi repetido para todas as rotas da API.
+
+## Boas práticas aplicadas
+
+- Mock de banco de dados nos testes  
+- Cobertura de todas as rotas  
+- Tratamento de erros (400, 404, 500)  
+- Uso correto de códigos HTTP  
+- API RESTful  
+- HATEOAS com links em todas as respostas  
+
+
+## Configuração
+
+1- Instalar dependências:
+pip install -r requirements.txt
+
+2- Configurar variáveis de ambiente em um arquivo .cred:
+DB_HOST=  
+DB_USER=  
+DB_PASSWORD=  
+DB_NAME=  
+DB_PORT=  
+SSL_CA_PATH=  
+
+3- Rodar testes:
+
+pytest -v
+
+## Deploy
+
+API hospedada em AWS EC2:
+
+http://3.222.251.98/imoveis

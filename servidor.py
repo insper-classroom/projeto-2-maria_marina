@@ -1,264 +1,299 @@
-from flask import Flask
+from flask import Flask, request, url_for
 import os
 import mysql.connector
 from mysql.connector import Error
 from dotenv import load_dotenv
-from views import registrar_rotas
 
-# Carrega as variáveis de ambiente do arquivo .cred
 load_dotenv('.cred')
 
-# Configurações para conexão com o banco de dados usando variáveis de ambiente
 config = {
-    'host': os.getenv('DB_HOST', 'localhost'),  # Obtém o host do banco de dados
-    'user': os.getenv('DB_USER'),  # Obtém o usuário do banco de dados
-    'password': os.getenv('DB_PASSWORD'),  # Obtém a senha do banco de dados
-    'database': os.getenv('DB_NAME', 'defaultdb'),  # Obtém o nome do banco de dados
-    'port': int(os.getenv('DB_PORT', 3306)),  # Obtém a porta do banco de dados
-    'ssl_ca': os.getenv('SSL_CA_PATH')  # Caminho para o certificado SSL
+    'host': os.getenv('DB_HOST', 'localhost'),
+    'user': os.getenv('DB_USER'),
+    'password': os.getenv('DB_PASSWORD'),
+    'database': os.getenv('DB_NAME', 'defaultdb'),
+    'port': int(os.getenv('DB_PORT', 3306)),
+    'ssl_ca': '/home/ubuntu/projeto-2-maria_marina/ca.pem'
 }
 
 
-# Função para conectar ao banco de dados
 def connect_db():
     """Estabelece a conexão com o banco de dados usando as configurações fornecidas."""
     try:
-        # Tenta estabelecer a conexão com o banco de dados usando mysql-connector-python
         conn = mysql.connector.connect(**config)
         if conn.is_connected():
             return conn
     except Error as err:
-        # Em caso de erro, imprime a mensagem de erro
         print(f"Erro: {err}")
         return None
 
 
 app = Flask(__name__)
 
-registrar_rotas(app)
+def mapear_imovel(linha):
+    return {
+        "id": linha[0],
+        "logradouro": linha[1],
+        "tipo_logradouro": linha[2],
+        "bairro": linha[3],
+        "cidade": linha[4],
+        "cep": linha[5],
+        "tipo": linha[6],
+        "valor": linha[7],
+        "data_aquisicao": linha[8]
+    }
 
-def registrar_rotas(app):
+def adicionar_links_imovel(imovel):
+    imovel["_links"] = {
+        "self": url_for("buscar_imovel", id=imovel["id"]),
+        "collection": url_for("listar_imoveis"),
+        "update": url_for("atualizar_imovel", id=imovel["id"]),
+        "delete": url_for("delete_imovel", id=imovel["id"])
+    }
+    return imovel
 
-    @app.route("/imoveis", methods=["GET"])
-    def listar_imoveis():
-        from servidor import connect_db
+campos = [
+    "logradouro", "tipo_logradouro", "bairro",
+    "cidade", "cep", "tipo", "valor", "data_aquisicao"
+]
 
-        conn = connect_db()
+@app.route("/imoveis", methods=["GET"])
+def listar_imoveis():
 
-        if conn is None:
-            return {"erro": "Erro ao conectar ao banco de dados"}, 500
+    conn = connect_db()
 
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM imoveis")
-        resultados = cursor.fetchall()
+    if conn is None:
+        return {"erro": "Erro ao conectar ao banco de dados"}, 500
 
-        imoveis = []
-        for imovel in resultados:
-            imoveis.append({
-                "id": imovel[0],
-                "logradouro": imovel[1],
-                "tipo_logradouro": imovel[2],
-                "bairro": imovel[3],
-                "cidade": imovel[4],
-                "cep": imovel[5],
-                "tipo": imovel[6],
-                "valor": imovel[7],
-                "data_aquisicao": imovel[8]
-            })
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM imoveis")
+    resultados = cursor.fetchall()
 
-        return {"imoveis": imoveis}, 200
+    imoveis = []
+    for linha in resultados:
+        imovel = mapear_imovel(linha)
+        imoveis.append(adicionar_links_imovel(imovel))
 
+    cursor.close()
+    conn.close()
 
-    @app.route("/imoveis/<int:id>", methods=["GET"])
-    def buscar_imovel(id):
-        from servidor import connect_db
-
-        conn = connect_db()
-
-        if conn is None:
-            return {"erro": "Erro ao conectar ao banco de dados"}, 500
-
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM imoveis WHERE id = %s", (id,))
-        resultado = cursor.fetchone()
-
-        if resultado is None:
-            return {"erro": "Imóvel não encontrado"}, 404
-
-        imovel = {
-            "id": resultado[0],
-            "logradouro": resultado[1],
-            "tipo_logradouro": resultado[2],
-            "bairro": resultado[3],
-            "cidade": resultado[4],
-            "cep": resultado[5],
-            "tipo": resultado[6],
-            "valor": resultado[7],
-            "data_aquisicao": resultado[8]
+    return {
+        "imoveis": imoveis,
+        "_links": {
+            "self": url_for("listar_imoveis"),
+            "create": url_for("add_novo_imovel")
         }
+    }, 200
 
-        return {"imovel": imovel}, 200
+@app.route("/imoveis/<int:id>", methods=["GET"])
+def buscar_imovel(id):
 
-    
-    @app.route("/imoveis", methods=["POST"])
-    def add_novo_imovel():
-        from servidor import connect_db
+    conn = connect_db()
 
-        conn = connect_db()
-        if conn is None:
-            return {"erro": "Erro ao conectar ao banco"}, 500
+    if conn is None:
+        return {"erro": "Erro ao conectar ao banco de dados"}, 500
 
-        dados = request.json
-        cursor = conn.cursor()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM imoveis WHERE id = %s", (id,))
+    resultado = cursor.fetchone()
 
-        sql = """
-        INSERT INTO imoveis (
-            logradouro, tipo_logradouro, bairro, cidade,
-            cep, tipo, valor, data_aquisicao
-        ) VALUES ( %s, %s , %s, %s, %s, %s, %s, %s)
-        """
+    cursor.close()
+    conn.close()
 
-        valores = (
-            dados["logradouro"],
-            dados["tipo_logradouro"],
-            dados["bairro"],
-            dados["cidade"],
-            dados["cep"],
-            dados["tipo"],
-            dados["valor"],
-            dados["data_aquisicao"]
-        )
+    if resultado is None:
+        return {"erro": "Imóvel não encontrado"}, 404
 
-        cursor.execute(sql, valores)
-        conn.commit()
+    imovel = mapear_imovel(resultado)
+    imovel = adicionar_links_imovel(imovel)
 
-        return {"mensagem": "Imóvel adicionado com sucesso"}, 200
-    
-    @app.route("/imoveis/<int:id>", methods=["PUT"])
-    def atualizar_imovel(id):
-        from servidor import connect_db
+    return {"imovel": imovel}, 200
 
-        conn = connect_db()
 
-        if conn is None:
-            return {"erro": "Erro ao conectar ao banco de dados"}, 500
+@app.route("/imoveis", methods=["POST"])
+def add_novo_imovel():
 
-        dados = request.json
+    conn = connect_db()
+    if conn is None:
+        return {"erro": "Erro ao conectar ao banco"}, 500
 
-        cursor = conn.cursor()
+    dados = request.json
+    if not dados or not all(campo in dados for campo in campos):
+        return {"erro": "Dados inválidos"}, 400
+    cursor = conn.cursor()
 
-        sql = """
-        UPDATE imoveis
-        SET logradouro=%s, tipo_logradouro=%s, bairro=%s, cidade=%s,
-            cep=%s, tipo=%s, valor=%s, data_aquisicao=%s
-        WHERE id=%s
-        """
+    sql = """
+    INSERT INTO imoveis (
+        logradouro, tipo_logradouro, bairro, cidade,
+        cep, tipo, valor, data_aquisicao
+    ) VALUES ( %s, %s , %s, %s, %s, %s, %s, %s)
+    """
 
-        valores = (
-            dados["logradouro"],
-            dados["tipo_logradouro"],
-            dados["bairro"],
-            dados["cidade"],
-            dados["cep"],
-            dados["tipo"],
-            dados["valor"],
-            dados["data_aquisicao"],
-            id
-        )
+    valores = (
+        dados["logradouro"],
+        dados["tipo_logradouro"],
+        dados["bairro"],
+        dados["cidade"],
+        dados["cep"],
+        dados["tipo"],
+        dados["valor"],
+        dados["data_aquisicao"]
+    )
 
-        cursor.execute(sql, valores)
+    cursor.execute(sql, valores)
+    conn.commit()
 
-        conn.commit()
+    novo_id = cursor.lastrowid
 
-        if cursor.rowcount == 0:
-            return {"erro": "Imóvel não encontrado"}, 404
+    cursor.close()
+    conn.close()
 
-        return {"mensagem": "Imóvel atualizado com sucesso"}, 200
-    
-    @app.route("/imoveis/<int:id>", methods=["DELETE"])
-    def delete_imovel(id):
-        from servidor import connect_db
+    novo_imovel = {
+        "id": novo_id,
+        **dados
+    }
 
-        conn = connect_db()
+    novo_imovel = adicionar_links_imovel(novo_imovel)
 
-        if conn is None:
-            return {"erro": "Erro ao conectar ao banco de dados"}, 500
+    return {"imovel": novo_imovel}, 201, {
+        "Location": url_for("buscar_imovel", id=novo_id, _external=True)
+    }
 
-        cursor = conn.cursor()
+@app.route("/imoveis/<int:id>", methods=["PUT"])
+def atualizar_imovel(id):
 
-        sql = "DELETE from imoveis WHERE id=%s"
-        valores = (id,)
+    conn = connect_db()
 
-        cursor.execute(sql, valores)
-        conn.commit()
+    if conn is None:
+        return {"erro": "Erro ao conectar ao banco de dados"}, 500
 
-        if cursor.rowcount == 0:
-            return {"erro": "Imóvel não encontrado"}, 404
+    dados = request.json
+    if not dados or not all(campo in dados for campo in campos):
+        return {"erro": "Dados inválidos"}, 400
 
-        return {"mensagem": "Imóvel excluido com sucesso"}, 200
-    
-    @app.route("/imoveis/tipo/<string:tipo>", methods=["GET"])
-    def listar_imoveis_por_tipo(tipo):
-        from servidor import connect_db
+    cursor = conn.cursor()
 
-        conn = connect_db()
+    sql = """
+    UPDATE imoveis
+    SET logradouro=%s, tipo_logradouro=%s, bairro=%s, cidade=%s,
+        cep=%s, tipo=%s, valor=%s, data_aquisicao=%s
+    WHERE id=%s
+    """
 
-        if conn is None:
-            return {"erro": "Erro ao conectar ao banco de dados"}, 500
+    valores = (
+        dados["logradouro"],
+        dados["tipo_logradouro"],
+        dados["bairro"],
+        dados["cidade"],
+        dados["cep"],
+        dados["tipo"],
+        dados["valor"],
+        dados["data_aquisicao"],
+        id
+    )
 
-        cursor = conn.cursor()
+    cursor.execute(sql, valores)
 
-        cursor.execute(
-            "SELECT * FROM imoveis WHERE tipo = %s",
-            (tipo,)
-        )
+    conn.commit()
 
-        resultados = cursor.fetchall()
+    if cursor.rowcount == 0:
+        cursor.close()
+        conn.close()
+        return {"erro": "Imóvel não encontrado"}, 404
 
-        imoveis = []
+    cursor.execute("SELECT * FROM imoveis WHERE id = %s", (id,))
+    resultado = cursor.fetchone()
 
-        for imovel in resultados:
-            imoveis.append({
-                "id": imovel[0],
-                "logradouro": imovel[1],
-                "tipo_logradouro": imovel[2],
-                "bairro": imovel[3],
-                "cidade": imovel[4],
-                "cep": imovel[5],
-                "tipo": imovel[6],
-                "valor": imovel[7],
-                "data_aquisicao": imovel[8]
-            })
+    imovel = mapear_imovel(resultado)
+    imovel = adicionar_links_imovel(imovel)
 
-        return {"imoveis": imoveis}, 200
-    
-    @app.route("/imoveis/cidade/<string:cidade>", methods=['GET'])
-    def listar_imoveis_por_cidade(cidade):
-        from servidor import connect_db
+    cursor.close()
+    conn.close()
+    return {"imovel": imovel}, 200
 
-        conn = connect_db()
+@app.route("/imoveis/<int:id>", methods=["DELETE"])
+def delete_imovel(id):
 
-        if conn is None:
-            return {"erro": "Erro ao conectar ao banco de dados"}, 500
+    conn = connect_db()
 
-        cursor = conn.cursor()
+    if conn is None:
+        return {"erro": "Erro ao conectar ao banco de dados"}, 500
 
-        cursor.execute("SELECT * FROM imoveis WHERE cidade = %s", (cidade,))
-        resultados = cursor.fetchall()
+    cursor = conn.cursor()
 
-        imoveis = []
+    sql = "DELETE from imoveis WHERE id=%s"
+    valores = (id,)
 
-        for imovel in resultados:
-            imoveis.append({
-                "id": imovel[0],
-                "logradouro": imovel[1],
-                "tipo_logradouro": imovel[2],
-                "bairro": imovel[3],
-                "cidade": imovel[4],
-                "cep": imovel[5],
-                "tipo": imovel[6],
-                "valor": imovel[7],
-                "data_aquisicao": imovel[8]
-            })
+    cursor.execute(sql, valores)
+    conn.commit()
 
-        return {"imoveis": imoveis}, 200
+    if cursor.rowcount == 0:
+        cursor.close()
+        conn.close()
+        return {"erro": "Imóvel não encontrado"}, 404
+
+    cursor.close()
+    conn.close()
+    return '', 204
+
+@app.route("/imoveis/tipo/<string:tipo>", methods=["GET"])
+def listar_imoveis_por_tipo(tipo):
+
+    conn = connect_db()
+
+    if conn is None:
+        return {"erro": "Erro ao conectar ao banco de dados"}, 500
+
+    cursor = conn.cursor()
+
+    cursor.execute(
+        "SELECT * FROM imoveis WHERE tipo = %s",
+        (tipo,)
+    )
+
+    resultados = cursor.fetchall()
+
+    imoveis = []
+
+    for linha in resultados:
+        imovel = mapear_imovel(linha)
+        imoveis.append(adicionar_links_imovel(imovel))
+
+    cursor.close()
+    conn.close()
+
+    return {
+        "imoveis": imoveis,
+        "_links": {
+            "self": url_for("listar_imoveis_por_tipo", tipo=tipo),
+            "collection": url_for("listar_imoveis")
+        }
+    }, 200
+
+@app.route("/imoveis/cidade/<string:cidade>", methods=['GET'])
+def listar_imoveis_por_cidade(cidade):
+
+    conn = connect_db()
+
+    if conn is None:
+        return {"erro": "Erro ao conectar ao banco de dados"}, 500
+
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT * FROM imoveis WHERE cidade = %s", (cidade,))
+    resultados = cursor.fetchall()
+
+    imoveis = []
+
+    for linha in resultados:
+        imovel = mapear_imovel(linha)
+        imoveis.append(adicionar_links_imovel(imovel))
+
+    cursor.close()
+    conn.close()
+
+    return {
+        "imoveis": imoveis,
+        "_links": {
+            "self": url_for("listar_imoveis_por_cidade", cidade=cidade),
+            "collection": url_for("listar_imoveis")
+        }
+    }, 200
