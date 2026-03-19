@@ -41,6 +41,21 @@ def test_get_imoveis(mock_connect_db, client):
     assert response.get_json() == expected_response
     mock_cursor.execute.assert_called_once_with("SELECT * FROM imoveis")
 
+@patch("servidor.connect_db")
+def test_get_imoveis_inexistente(mock_connect_db, client):
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cursor.fetchall.return_value = []
+    mock_connect_db.return_value = mock_conn
+
+    response = client.get("/imoveis")
+
+    assert response.status_code == 200
+    assert response.get_json() == {"imoveis": []}
+
+    mock_cursor.execute.assert_called_once_with("SELECT * FROM imoveis")
 
 @patch("servidor.connect_db")
 def test_buscar_imovel_por_id_existente(mock_connect_db, client):
@@ -158,6 +173,28 @@ def test_add_novo_imovel(mock_connect_db, client):
             dados_imovel_teste["data_aquisicao"])
         )
     
+    mock_conn.commit.assert_called_once()
+
+@patch("servidor.connect_db")
+def test_add_novo_imovel_inexistente(mock_connect_db, client):
+    """Testa add um imóvel inexistente"""
+
+    # Given
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+    mock_cursor.rowcount = 0
+
+    mock_connect_db.return_value = mock_conn
+
+    # When
+    response = client.put("/imoveis/999", json=dados_imovel_teste)
+
+    # Then
+    assert response.status_code == 404
+    assert response.get_json() == {"erro": "Imóvel não encontrado"}
+
+    mock_cursor.execute.assert_called_once()
     mock_conn.commit.assert_called_once()
 
 
@@ -356,6 +393,29 @@ def test_listar_imoveis_por_cidade(mock_connect_db, client):
     )
 
 @patch("servidor.connect_db")
+def test_listar_imoveis_por_cidade_inexistente(mock_connect_db, client):
+    """Testa listar imoveis por cidade sem resultado"""
+
+    # Given
+    mock_conn = MagicMock()
+    mock_cursor = MagicMock()
+    mock_conn.cursor.return_value = mock_cursor
+
+    mock_cursor.fetchall.return_value = []
+    mock_connect_db.return_value = mock_conn
+
+    # When
+    response = client.get("/imoveis/cidade/São Paulo")
+
+    # Then
+    assert response.status_code == 200
+    assert response.get_json() == {"imoveis": []}
+
+    mock_cursor.execute.assert_called_once_with(
+        "SELECT * FROM imoveis WHERE cidade = %s", ("São Paulo",)
+    )
+
+@patch("servidor.connect_db")
 def test_listar_imoveis_erro_conexao(mock_connect_db, client):
     """Testa erro de conexão ao listar imóveis"""
 
@@ -368,4 +428,3 @@ def test_listar_imoveis_erro_conexao(mock_connect_db, client):
     # Then
     assert response.status_code == 500
     assert response.get_json() == {"erro": "Erro ao conectar ao banco de dados"}
-
